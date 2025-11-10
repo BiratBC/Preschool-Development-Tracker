@@ -68,6 +68,10 @@ export default function DashboardComponent() {
   const handleIndividualGoals = (id : Number) => {
       router.push(`/student/${id}`)
   }
+  const handleLogout = () => {
+    localStorage.setItem("adminId", "");
+    router.push("/")
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -109,6 +113,7 @@ export default function DashboardComponent() {
 
           {/* User Profile */}
           <div className="p-4 border-t border-gray-200">
+            <button onClick={handleLogout}>
             <div className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
               <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold">
                 AD
@@ -119,6 +124,7 @@ export default function DashboardComponent() {
               </div>
               <LogOut className="w-5 h-5 text-gray-400" />
             </div>
+            </button>
           </div>
         </div>
       </aside>

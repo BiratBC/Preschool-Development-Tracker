@@ -1,9 +1,10 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Button } from "./ui/button";
-import { Share2, Check, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
-import { NextRequest } from "next/server";
+import { useRouter } from "next/router";
+
 type Category = {
   id: number;
   name: string;
@@ -11,6 +12,7 @@ type Category = {
 };
 
 export default function GoalsComponent() {
+  const router = useRouter();
   const [milestone_categories, setmilestone_categories] = useState<Category[]>([]);
   const [milestones, setMilestones] = useState({
     fineMotor: [
