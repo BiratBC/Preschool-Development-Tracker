@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Check, X } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 
 type Category = {
   id: number;
@@ -209,6 +209,10 @@ export default function GoalsComponent() {
     return Response.json({ success: true, data });
   }  
 
+  const goBack = () => {
+    router.push("/dashboard");
+  }
+
 
   return (
     
@@ -282,6 +286,10 @@ export default function GoalsComponent() {
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="flex justify-center py-5 w-full">
+        <Button onClick={goBack} className="items-center mx-0 my-auto">Go Back</Button>
         </div>
 
         <div>

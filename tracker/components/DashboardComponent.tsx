@@ -73,6 +73,10 @@ export default function DashboardComponent() {
     router.push("/")
   }
 
+  const addStudentPage = () => {
+    router.push("/dashboard/addStudent");
+  }
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
@@ -156,7 +160,7 @@ export default function DashboardComponent() {
                 <Bell className="w-6 h-6 text-gray-600" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
-              <button className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:shadow-lg transition-shadow">
+              <button className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:shadow-lg transition-shadow" onClick={addStudentPage}>
                 <Plus className="w-5 h-5" />
                 <span className="font-medium">Add Student</span>
               </button>
