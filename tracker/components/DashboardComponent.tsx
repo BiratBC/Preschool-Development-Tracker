@@ -1,12 +1,14 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Home, Users, Target, Settings, LogOut, Plus, Search, Bell, Menu, X, TrendingUp, Award, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 
 
 export default function DashboardComponent() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [studentsData, setStudentsData] = useState<null | any>(null)
   const [selectedStudent, setSelectedStudent] = useState(null);
 
   const students = [
@@ -20,37 +22,20 @@ export default function DashboardComponent() {
       lastUpdated: '2 hours ago',
       color: 'bg-purple-500'
     },
-    { 
-      id: 2, 
-      name: 'Liam Smith', 
-      avatar: 'LS',
-      progress: 60,
-      totalGoals: 18,
-      completedGoals: 11,
-      lastUpdated: '5 hours ago',
-      color: 'bg-blue-500'
-    },
-    { 
-      id: 3, 
-      name: 'Olivia Brown', 
-      avatar: 'OB',
-      progress: 85,
-      totalGoals: 18,
-      completedGoals: 15,
-      lastUpdated: '1 day ago',
-      color: 'bg-pink-500'
-    },
-    { 
-      id: 4, 
-      name: 'Noah Davis', 
-      avatar: 'ND',
-      progress: 45,
-      totalGoals: 18,
-      completedGoals: 8,
-      lastUpdated: '3 hours ago',
-      color: 'bg-green-500'
-    },
   ];
+
+  const getStudentsData = async () => {
+    try {
+      const {data , error} = await supabase.from('students').select('*');
+       setStudentsData(data);
+       console.log(data);
+      //  console.log("Test",studentsData[0]);
+       
+    } catch (error : any) {
+      console.log(error);
+      
+    }
+  }
 
   const stats = [
     { label: 'Total Students', value: '24', icon: Users, color: 'bg-blue-500', change: '+3 this month' },
@@ -58,13 +43,6 @@ export default function DashboardComponent() {
     { label: 'Completed Today', value: '47', icon: Award, color: 'bg-green-500', change: '+12 from yesterday' },
     { label: 'Avg. Progress', value: '68%', icon: TrendingUp, color: 'bg-orange-500', change: '+5% this week' },
   ];
-
-  const recentActivity = [
-    { student: 'Emma Johnson', action: 'Mastered Fine Motor skill', time: '2 hours ago', type: 'success' },
-    { student: 'Liam Smith', action: 'Started Language goal', time: '4 hours ago', type: 'info' },
-    { student: 'Olivia Brown', action: 'Completed Gross Motor milestone', time: '1 day ago', type: 'success' },
-  ];
-
   const handleIndividualGoals = (id : Number) => {
       router.push(`/student/${id}`)
   }
@@ -76,6 +54,11 @@ export default function DashboardComponent() {
   const addStudentPage = () => {
     router.push("/dashboard/addStudent");
   }
+
+  useEffect(() => {
+    getStudentsData();
+  }, [])
+  
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -195,13 +178,13 @@ export default function DashboardComponent() {
                 <p className="text-sm text-gray-500 mt-1">Track progress for all students</p>
               </div>
               <div className="p-6 space-y-4" onClick={() => {handleIndividualGoals(1)}}>
-                {students.map(student => (
+                {studentsData?.map((student: any) => (
                   <div key={student.id} className="flex items-center space-x-4 p-4 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer border border-gray-100">
                     <div className={`w-14 h-14 ${student.color} rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md`}>
                       {student.avatar}
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-800">{student.name}</h3>
+                      <h3 className="font-semibold text-gray-800">{student?.full_name}</h3>
                       <div className="flex items-center space-x-2 mt-1">
                         <div className="flex-1 bg-gray-200 rounded-full h-2">
                           <div 
@@ -221,37 +204,11 @@ export default function DashboardComponent() {
                 ))}
               </div>
             </div>
-
-            {/* Recent Activity */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-bold text-gray-800">Recent Activity</h2>
-                <p className="text-sm text-gray-500 mt-1">Latest updates</p>
-              </div>
-              <div className="p-6 space-y-4">
-                {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex space-x-3">
-                    <div className={`w-2 h-2 mt-2 rounded-full ${activity.type === 'success' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-800">{activity.student}</p>
-                      <p className="text-sm text-gray-600 mt-1">{activity.action}</p>
-                      <p className="text-xs text-gray-400 mt-1">{activity.time}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </main>
       </div>
 
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        ></div>
-      )}
+ 
     </div>
   );
 }
