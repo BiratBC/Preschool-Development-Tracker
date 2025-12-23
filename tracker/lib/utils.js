@@ -216,3 +216,29 @@ function isValidPhone(phone) {
   const phoneRegex = /^[\d\s\-\+\(\)]+$/;
   return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 10;
 }
+
+// Grouping of milestone to category
+export function groupByCategory(data) {
+  const grouped = {};
+
+  data.forEach(item => {
+    const category = item.milestone_id.category_id;
+
+    if (!grouped[category.id]) {
+      grouped[category.id] = {
+        categoryName: category.name,
+        icon: category.icon,
+        milestones: []
+      };
+    }
+
+    grouped[category.id].milestones.push({
+      milestoneId: item.milestone_id.id,
+      title: item.milestone_id.description,
+      status: item.status,
+      studentMilestoneId: item.id
+    });
+  });
+
+  return grouped;
+}

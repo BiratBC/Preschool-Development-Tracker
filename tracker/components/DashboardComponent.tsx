@@ -9,21 +9,6 @@ export default function DashboardComponent() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [studentsData, setStudentsData] = useState<null | any>(null)
-  const [selectedStudent, setSelectedStudent] = useState(null);
-
-  const students = [
-    { 
-      id: 1, 
-      name: 'Emma Johnson', 
-      avatar: 'EJ',
-      progress: 75,
-      totalGoals: 18,
-      completedGoals: 14,
-      lastUpdated: '2 hours ago',
-      color: 'bg-purple-500'
-    },
-  ];
-
   const getStudentsData = async () => {
     try {
       const {data , error} = await supabase.from('students').select('*');
@@ -177,9 +162,9 @@ export default function DashboardComponent() {
                 <h2 className="text-xl font-bold text-gray-800">Students Overview</h2>
                 <p className="text-sm text-gray-500 mt-1">Track progress for all students</p>
               </div>
-              <div className="p-6 space-y-4" onClick={() => {handleIndividualGoals(1)}}>
                 {studentsData?.map((student: any) => (
-                  <div key={student.id} className="flex items-center space-x-4 p-4 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer border border-gray-100">
+              <div key={student.id} className="p-6 space-y-4" onClick={() => {handleIndividualGoals(student?.id)}}>
+                  <div className="flex items-center space-x-4 p-4 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer border border-gray-100">
                     <div className={`w-14 h-14 ${student.color} rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md`}>
                       {student.avatar}
                     </div>
@@ -201,8 +186,8 @@ export default function DashboardComponent() {
                       <p className="text-xs text-gray-500">{student.lastUpdated}</p>
                     </div>
                   </div>
-                ))}
               </div>
+                ))}
             </div>
           </div>
         </main>
