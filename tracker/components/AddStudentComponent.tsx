@@ -10,11 +10,11 @@ import {
   X,
   ArrowLeft,
   Save,
-  UserPlus,
 } from "lucide-react";
 import { createStudentWithMilestones } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { toast } from "react-toastify";
 
 export default function AddStudentPage() {
   const router = useRouter();
@@ -43,7 +43,7 @@ export default function AddStudentPage() {
   };
 
   const handleAvatarChange = (e: any) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (file) {
       setAvatarFile(file);
       const reader: any = new FileReader();
@@ -60,25 +60,30 @@ export default function AddStudentPage() {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    console.log("Form submitted:", formData);
-    console.log("Avatar:", avatarPreview);
+    const user = localStorage.getItem("adminId");
 
-    const user = (await supabase.auth.getUser()).data.user;
-    let avatarUrl = null;
-    if (avatarFile) {
-      const { data } = await supabase.storage
-        .from("avatars")
-        .upload(`${user?.id}/${Date.now()}.jpg`, avatarFile);
-      avatarUrl = data?.path;
+    if (!user) {
+      toast.error("You must be logged in");
+      setIsSubmitting(false);
+      return;
     }
-    // In real implementation:
-    const result = await createStudentWithMilestones(formData, user?.id);
-    if (result.success && result.student) {
-      router.push(`/student/${result.student.id}`);
+
+    const result = await createStudentWithMilestones(
+      {
+        ...formData,
+        avatarFile,
+      },
+      user
+    );
+
+    if (result.success) {
+      toast.success("Student added successfully!");
+      router.push("/dashboard");
+    } else {
+      toast.error(result.error || "Failed to add student");
     }
 
     setIsSubmitting(false);
-    alert("Student added successfully!");
   };
 
   const isFormValid = () => {

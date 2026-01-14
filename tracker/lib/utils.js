@@ -1,62 +1,39 @@
-import { clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 import { supabase } from "./supabaseClient";
 
 export async function createStudentWithMilestones(formData, userId) {
   try {
-    // ========================================
-    // STEP 1: Generate unique session ID
-    // ========================================
-    const { data: sessionIdData, error: sessionError } = await supabase
-      .rpc('generate_session_id');
-
-    if (sessionError) {
-      console.error('Session ID generation error:', sessionError);
-      throw new Error('Failed to generate session ID');
-    }
-
-    // ========================================
-    // STEP 2: Upload avatar if provided
-    // ========================================
     let avatarUrl = null;
-    
+
+    // 1. Upload avatar (if provided)
     if (formData.avatarFile) {
-      // Generate unique filename
-      const fileExt = formData.avatarFile.name.split('.').pop();
-      const fileName = `${sessionIdData}-${Date.now()}.${fileExt}`;
-      
-      // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('avatars')  // Make sure this bucket exists in Supabase
+      const ext = formData.avatarFile.name.split(".").pop();
+      const fileName = `${crypto.randomUUID()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
         .upload(fileName, formData.avatarFile, {
-          cacheControl: '3600',
-          upsert: false
+          contentType: formData.avatarFile.type,
         });
 
       if (uploadError) {
-        console.error('Avatar upload error:', uploadError);
-        // Don't throw - continue without avatar
-      } else {
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(fileName);
-        
-        avatarUrl = publicUrl;
+        throw uploadError;
       }
+
+      const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
+
+      avatarUrl = data.publicUrl;
     }
 
-    // ========================================
-    // STEP 3: Create student record
-    // ========================================
+    // 2. Create student
     const { data: student, error: studentError } = await supabase
-      .from('students')
+      .from("students")
       .insert({
-        session_id: sessionIdData,
         full_name: formData.fullName,
         date_of_birth: formData.dateOfBirth,
         gender: formData.gender || null,
@@ -67,100 +44,34 @@ export async function createStudentWithMilestones(formData, userId) {
         address: formData.address || null,
         allergies: formData.allergies || null,
         medical_notes: formData.medicalNotes || null,
-        status: 'active',
-        created_by: userId
+        created_by: userId,
+        status: "active",
       })
       .select()
       .single();
 
-    if (studentError) {
-      console.error('Student creation error:', studentError);
-      throw new Error('Failed to create student: ' + studentError.message);
-    }
+    if (studentError) throw studentError;
 
-    // ========================================
-    // STEP 4: Get all active milestone templates
-    // ========================================
-    const { data: templates, error: templatesError } = await supabase
-      .from('milestone_templates')
-      .select('id, category_id')
-      .eq('is_active', true)
-      .order('display_order');
+    // 3. Fetch milestones
+    const { data: milestones } = await supabase
+      .from("milestones")
+      .select("id")
+      .eq("is_active", true);
 
-    if (templatesError) {
-      console.error('Templates fetch error:', templatesError);
-      throw new Error('Failed to fetch milestone templates');
-    }
-
-    if (!templates || templates.length === 0) {
-      console.warn('No milestone templates found. Please seed the database first.');
-    }
-
-    // ========================================
-    // STEP 5: Initialize all milestones for student
-    // ========================================
-    const studentMilestones = templates.map(template => ({
-      student_id: student.id,
-      milestone_template_id: template.id,
-      status: 'not-started',
-      updated_by: userId
-    }));
-
-    const { error: milestonesError } = await supabase
-      .from('student_milestones')
-      .insert(studentMilestones);
-
-    if (milestonesError) {
-      console.error('Milestones initialization error:', milestonesError);
-      
-      // Rollback: Delete the student since milestones failed
-      await supabase
-        .from('students')
-        .delete()
-        .eq('id', student.id);
-      
-      throw new Error('Failed to initialize milestones: ' + milestonesError.message);
-    }
-
-    // ========================================
-    // STEP 6: Create initial activity log entry
-    // ========================================
-    await supabase
-      .from('activity_log')
-      .insert({
+    if (milestones?.length) {
+      const rows = milestones.map((m) => ({
         student_id: student.id,
-        user_id: userId,
-        action_type: 'student_created',
-        description: `Student profile created for ${formData.fullName}`,
-        metadata: {
-          session_id: sessionIdData,
-          milestone_count: templates.length
-        }
-      });
+        milestone_id: m.id,
+        status: "not-started",
+      }));
 
-    // ========================================
-    // STEP 7: Return success with student data
-    // ========================================
-    return {
-      success: true,
-      student: {
-        id: student.id,
-        sessionId: student.session_id,
-        fullName: student.full_name,
-        dateOfBirth: student.date_of_birth,
-        avatarUrl: student.avatar_url,
-        milestoneCount: templates.length
-      },
-      message: `Successfully created student with ${templates.length} milestones`
-    };
+      await supabase.from("student_milestones").insert(rows);
+    }
 
+    return { success: true, student };
   } catch (error) {
-    console.error('Error in createStudentWithMilestones:', error);
-    return {
-      success: false,
-      error: error.message || 'An unexpected error occurred',
-      details: error
-    };
+    console.error(error);
+    return { success: false, error: error.message };
   }
 }
 
@@ -171,37 +82,37 @@ export function validateStudentForm(formData) {
   const errors = {};
 
   // Required fields
-  if (!formData.fullName || formData.fullName.trim() === '') {
-    errors.fullName = 'Full name is required';
+  if (!formData.fullName || formData.fullName.trim() === "") {
+    errors.fullName = "Full name is required";
   }
 
   if (!formData.dateOfBirth) {
-    errors.dateOfBirth = 'Date of birth is required';
+    errors.dateOfBirth = "Date of birth is required";
   } else {
     // Check if date is not in the future
     const birthDate = new Date(formData.dateOfBirth);
     const today = new Date();
     if (birthDate > today) {
-      errors.dateOfBirth = 'Date of birth cannot be in the future';
+      errors.dateOfBirth = "Date of birth cannot be in the future";
     }
   }
 
-  if (!formData.parentName || formData.parentName.trim() === '') {
-    errors.parentName = 'Parent/Guardian name is required';
+  if (!formData.parentName || formData.parentName.trim() === "") {
+    errors.parentName = "Parent/Guardian name is required";
   }
 
   // Optional field validation
   if (formData.parentEmail && !isValidEmail(formData.parentEmail)) {
-    errors.parentEmail = 'Please enter a valid email address';
+    errors.parentEmail = "Please enter a valid email address";
   }
 
   if (formData.parentPhone && !isValidPhone(formData.parentPhone)) {
-    errors.parentPhone = 'Please enter a valid phone number';
+    errors.parentPhone = "Please enter a valid phone number";
   }
 
   return {
     isValid: Object.keys(errors).length === 0,
-    errors
+    errors,
   };
 }
 
@@ -214,21 +125,21 @@ function isValidEmail(email) {
 // Phone validation helper (basic)
 function isValidPhone(phone) {
   const phoneRegex = /^[\d\s\-\+\(\)]+$/;
-  return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 10;
+  return phoneRegex.test(phone) && phone.replace(/\D/g, "").length >= 10;
 }
 
 // Grouping of milestone to category
 export function groupByCategory(data) {
   const grouped = {};
 
-  data.forEach(item => {
+  data.forEach((item) => {
     const category = item.milestone_id.category_id;
 
     if (!grouped[category.id]) {
       grouped[category.id] = {
         categoryName: category.name,
         icon: category.icon,
-        milestones: []
+        milestones: [],
       };
     }
 
@@ -236,9 +147,45 @@ export function groupByCategory(data) {
       milestoneId: item.milestone_id.id,
       title: item.milestone_id.description,
       status: item.status,
-      studentMilestoneId: item.id
+      studentMilestoneId: item.id,
     });
   });
 
   return grouped;
 }
+export const getStatusLabel = (status) => {
+  switch (status) {
+    case "mastered":
+      return "Mastered";
+    case "in-progress":
+      return "In Progress";
+    case "not-started":
+      return "Not Started";
+    default:
+      return status;
+  }
+};
+
+export const getStatusIcon = (status) => {
+  switch (status) {
+    case "mastered":
+      return "✓";
+    case "not-started":
+      return "☐";
+    default:
+      return "";
+  }
+};
+
+export const getStatusColor = (status) => {
+  switch (status) {
+    case "mastered":
+      return "bg-green-200 border-green-300 text-green-900";
+    case "in-progress":
+      return "bg-yellow-200 border-yellow-300 text-yellow-900";
+    case "not-started":
+      return "bg-red-200 border-red-300 text-red-900";
+    default:
+      return "bg-gray-200 border-gray-300 text-gray-900";
+  }
+};
