@@ -13,7 +13,7 @@ async function testConnection() {
   if (error) {
     console.error("Supabase connection failed:", error);
   } else {
-    console.log("Supabase is connected. Sample data:", data);
+    console.log("Supabase is connected");
   }
 }
 testConnection();

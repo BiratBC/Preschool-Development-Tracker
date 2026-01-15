@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
 import { groupByCategory } from "@/lib/utils";
 import CategoryCard from "./CategoryCard";
-import {toast} from 'react-toastify';
+import { toast } from "react-toastify";
 import LoadingBar from "react-top-loading-bar";
 export default function GoalsComponent() {
   const router = useRouter();
@@ -18,11 +18,10 @@ export default function GoalsComponent() {
   const [allMilestones, setAllMilestones] = useState<any[]>([]);
 
   // Status cycle: Not Started -> In Progress -> Mastered -> Not Started
-  const statusCycle = ['not-started', 'in-progress', 'mastered'];
+  const statusCycle = ["not-started", "in-progress", "mastered"];
   const [progress, setProgress] = useState(0);
 
   const getCategories = async () => {
-
     const { data, error } = await supabase
       .from("student_milestones")
       .select(
@@ -51,11 +50,14 @@ export default function GoalsComponent() {
       )
       .eq("student_id", studentId);
 
+    console.log(data);
+    
+
     if (error) {
       console.error("Error fetching data:", error);
       return;
     }
-    
+
     // console.log("data", data[0]);
     setStudentData(data[0]);
     setAllMilestones(data);
@@ -65,37 +67,35 @@ export default function GoalsComponent() {
 
   const handleStatusChange = (studentMilestoneId: number) => {
     console.log("=== Changing status for milestone ID:", studentMilestoneId);
-    
+
     // Update in allMilestones array (THIS IS CRITICAL - this is what gets saved to DB)
-    setAllMilestones(prevMilestones => {
-      const updated = prevMilestones.map(milestone => {
+    setAllMilestones((prevMilestones) => {
+      const updated = prevMilestones.map((milestone) => {
         if (milestone.milestone_id.id === studentMilestoneId) {
           const currentIndex = statusCycle.indexOf(milestone.status);
           const nextIndex = (currentIndex + 1) % statusCycle.length;
           const newStatus = statusCycle[nextIndex];
-          
+
           console.log(`Found milestone: ${milestone.milestone_id.description}`);
           console.log(`Changing from ${milestone.status} to ${newStatus}`);
-          
+
           return {
             ...milestone,
             status: newStatus,
-            started_at: newStatus === 'in-progress' && !milestone.started_at 
-              ? new Date().toISOString() 
-              : milestone.started_at,
-            completed_at: newStatus === 'mastered' 
-              ? new Date().toISOString() 
-              : null
+            started_at:
+              newStatus === "in-progress" && !milestone.started_at
+                ? new Date().toISOString()
+                : milestone.started_at,
+            completed_at:
+              newStatus === "mastered" ? new Date().toISOString() : null,
           };
         }
         // console.log("milestone.id",milestone.milestone_id.id);
         // console.log("studentMilestoneId", studentMilestoneId);
-        
+
         return milestone;
       });
 
-      
-      
       console.log("Updated allMilestones:", updated);
       return updated;
     });
@@ -103,8 +103,8 @@ export default function GoalsComponent() {
     // Update in grouped state for immediate UI update
     setGrouped((prevGrouped: any) => {
       const newGrouped = { ...prevGrouped };
-      
-      Object.keys(newGrouped).forEach(categoryKey => {
+
+      Object.keys(newGrouped).forEach((categoryKey) => {
         newGrouped[categoryKey] = {
           ...newGrouped[categoryKey],
           milestones: newGrouped[categoryKey].milestones.map((m: any) => {
@@ -112,23 +112,23 @@ export default function GoalsComponent() {
               const currentIndex = statusCycle.indexOf(m.status);
               const nextIndex = (currentIndex + 1) % statusCycle.length;
               const newStatus = statusCycle[nextIndex];
-              
+
               return {
                 ...m,
                 status: newStatus,
-                started_at: newStatus === 'in-progress' && !m.started_at 
-                  ? new Date().toISOString() 
-                  : m.started_at,
-                completed_at: newStatus === 'mastered' 
-                  ? new Date().toISOString() 
-                  : null
+                started_at:
+                  newStatus === "in-progress" && !m.started_at
+                    ? new Date().toISOString()
+                    : m.started_at,
+                completed_at:
+                  newStatus === "mastered" ? new Date().toISOString() : null,
               };
             }
             return m;
-          })
+          }),
         };
       });
-      
+
       return newGrouped;
     });
   };
@@ -143,27 +143,29 @@ export default function GoalsComponent() {
 
     try {
       // Prepare updates
-      const updates = allMilestones.map(milestone => ({
+      const updates = allMilestones.map((milestone) => ({
         id: milestone.id,
         status: milestone.status,
         started_at: milestone.started_at,
         completed_at: milestone.completed_at,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       }));
 
-      setProgress(progress + 20)
+      setProgress(progress + 20);
 
       // Update each milestone
-      let updateCount = 0
+      let updateCount = 0;
       for (const update of updates) {
-        console.log(`Updating milestone ID ${update.id} with status: ${update.status}`);
-        const {data, error } = await supabase
+        console.log(
+          `Updating milestone ID ${update.id} with status: ${update.status}`
+        );
+        const { data, error } = await supabase
           .from("student_milestones")
           .update({
             status: update.status,
             started_at: update.started_at,
             completed_at: update.completed_at,
-            updated_at: update.updated_at
+            updated_at: update.updated_at,
           })
           .eq("id", update.id)
           .select();
@@ -175,12 +177,12 @@ export default function GoalsComponent() {
         updateCount++;
         setProgress(30 + (updateCount / updates.length) * 60);
       }
-      setProgress(100)
-      toast.success("Milestones updated successfully!")
+      setProgress(100);
+      toast.success("Milestones updated successfully!");
       await getCategories();
     } catch (error) {
-      setProgress(100)
-      toast.error("Error updating milestones")
+      setProgress(100);
+      toast.error("Error updating milestones");
       console.error("Error updating milestones:", error);
     } finally {
       setLoading(false);
@@ -188,8 +190,17 @@ export default function GoalsComponent() {
     }
   };
 
+  const exportReport = () => {
+    setLoading(true)
+    setProgress(20);
+    window.open(`/api/export-report/${studentId}`, "_blank");
+    setLoading(false)
+    setProgress(100)
+  };
+
+
   useEffect(() => {
-    getCategories();    
+    getCategories();
   }, []);
 
   return (
@@ -204,7 +215,6 @@ export default function GoalsComponent() {
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold text-blue-600 mb-3">
             My Growth Adventure!
-  
           </h1>
           <p className="text-xl text-gray-600">
             Tracking 6 Key Developmental Milestones
@@ -216,7 +226,7 @@ export default function GoalsComponent() {
 
         {/* Milestone Categories Grid */}
         <div className="grid grid-cols-3 gap-6">
-          {Object.values(grouped).map((category: any, index : any) => (
+          {Object.values(grouped).map((category: any, index: any) => (
             <CategoryCard
               key={index}
               name={category.categoryName}
@@ -241,6 +251,15 @@ export default function GoalsComponent() {
               className="items-center mx-0 my-auto bg-green-600 hover:bg-green-700 disabled:bg-green-400"
             >
               {loading ? "Updating..." : "Update"}
+            </Button>
+          </div>
+          <div>
+            <Button
+              onClick={exportReport}
+              disabled={loading}
+              className="items-center mx-0 my-auto bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400"
+            >
+              {loading ? "Exporting..." : "Export"}
             </Button>
           </div>
         </div>
