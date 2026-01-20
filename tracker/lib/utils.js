@@ -15,10 +15,13 @@ export async function createStudentWithMilestones(formData, userId) {
       const ext = formData.avatarFile.name.split(".").pop();
       const fileName = `${crypto.randomUUID()}.${ext}`;
 
+      console.log(formData.avatarFile);
+      console.log(formData.avatarFile instanceof File);
+
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(fileName, formData.avatarFile, {
-          contentType: formData.avatarFile.type,
+          contentType: formData.avatarFile.type,      
         });
 
       if (uploadError) {

@@ -8,16 +8,16 @@ import {
   LogOut,
   Plus,
   Search,
-  Bell,
   Menu,
   X,
   TrendingUp,
   Award,
   Clock,
 } from "lucide-react";
+import { Button } from "./ui/button";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
+import { toast } from "react-toastify";
 
 export default function DashboardComponent() {
   const router = useRouter();
@@ -25,68 +25,78 @@ export default function DashboardComponent() {
   const [studentsData, setStudentsData] = useState<null | any>(null);
   const [milestonesData, setMilestonesData] = useState<null | any>(null);
   const [studentMilestones, setStudentMilestones] = useState<null | any>(null);
+
+  //Get Students Data
   const getStudentsData = async () => {
-    try {
-      const { data, error } = await supabase.from("students").select("*");
-      setStudentsData(data);
-    } catch (error: any) {
-      console.log(error);
-    }
-  };
-  const getMilestonesData = async () => {
-    try {
-      const { data, error } = await supabase.from("milestones").select("*");
-      setMilestonesData(data);
-    } catch (error) {
-      console.log(error);
-    }
+    const res = await fetch("/api/students");
+    const data = await res.json();
+    setStudentsData(data);
   };
 
+  //Get Milestones Data
+  const getMilestonesData = async () => {
+    const res = await fetch("/api/milestones");
+    const data = await res.json();
+    setMilestonesData(data);
+  };
+
+  //Get Students Milestones Data
   const getStudentMilestones = async () => {
+    const res = await fetch("/api/student-milestones");
+    const data = await res.json();
+    setStudentMilestones(data);
+  };
+
+  // Delete Student Record
+  const deleteStudent = async (studentId: string) => {
     try {
-      const { data, error } = await supabase
-        .from("student_milestones")
-        .select("*");
-      setStudentMilestones(data);
+      const res = await fetch(`/api/students/${studentId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Delete failed");
+
+      toast.success("Student deleted");
+
+      setStudentsData((prev: any[]) =>
+        prev.filter((student) => student.id !== studentId),
+      );
     } catch (error) {
-      console.error(error);
+      toast.error("Failed to delete student");
     }
   };
 
   const computedStudents = React.useMemo(() => {
-  if (!studentsData || !studentMilestones) return [];
+    if (!studentsData || !studentMilestones) return [];
 
-  return studentsData.map((student: any) => {
-    const milestonesForStudent = studentMilestones.filter(
-      (sm: any) => sm.student_id === student.id
-    );
+    return studentsData.map((student: any) => {
+      const milestonesForStudent = studentMilestones.filter(
+        (sm: any) => sm.student_id === student.id,
+      );
 
-    const totalGoals = milestonesForStudent.length;
-    const completedGoals = milestonesForStudent.filter(
-      (sm: any) => sm.status === "mastered"
-    ).length;
+      const totalGoals = milestonesForStudent.length;
+      const completedGoals = milestonesForStudent.filter(
+        (sm: any) => sm.status === "mastered",
+      ).length;
 
-    const progress =
-      totalGoals === 0
-        ? 0
-        : Math.round((completedGoals / totalGoals) * 100);
+      const progress =
+        totalGoals === 0 ? 0 : Math.round((completedGoals / totalGoals) * 100);
 
-    const lastUpdated =
-      milestonesForStudent
-        .map((m: any) => new Date(m.updated_at))
-        .sort((a : any, b : any) => b.getTime() - a.getTime())[0]
-        ?.toLocaleDateString() || "—";
+      const lastUpdated =
+        milestonesForStudent
+          .map((m: any) => new Date(m.updated_at))
+          .sort((a: any, b: any) => b.getTime() - a.getTime())[0]
+          ?.toLocaleDateString() || "—";
 
-    return {
-      ...student,
-      totalGoals,
-      completedGoals,
-      progress,
-      lastUpdated,
-    };
-  });
-}, [studentsData, studentMilestones]);
-
+      return {
+        ...student,
+        totalGoals,
+        completedGoals,
+        progress,
+        lastUpdated,
+      };
+    });
+  }, [studentsData, studentMilestones]);
 
   const handleIndividualGoals = (id: Number) => {
     router.push(`/student/${id}`);
@@ -249,12 +259,14 @@ export default function DashboardComponent() {
               {computedStudents?.map((student: any) => (
                 <div
                   key={student.id}
-                  className="p-6 space-y-4"
-                  onClick={() => {
-                    handleIndividualGoals(student?.id);
-                  }}
+                  className="p-6 space-y-4 flex justify-between gap-1.5"
                 >
-                  <div className="flex items-center space-x-4 p-4 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer border border-gray-100">
+                  <div
+                    onClick={() => {
+                      handleIndividualGoals(student?.id);
+                    }}
+                    className="flex items-center w-screen space-x-4 p-4 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer border border-gray-100"
+                  >
                     <Image
                       src={student?.avatar_url}
                       alt="Student Avatar"
@@ -289,6 +301,16 @@ export default function DashboardComponent() {
                         {student.lastUpdated}
                       </p>
                     </div>
+                  </div>
+                  <div
+                    className="flex items-center justify-center"
+                    onClick={() => {
+                      deleteStudent(student?.id);
+                    }}
+                  >
+                    <Button className="bg-red-700 hover:bg-red-800 cursor-pointer ">
+                      Delete
+                    </Button>
                   </div>
                 </div>
               ))}

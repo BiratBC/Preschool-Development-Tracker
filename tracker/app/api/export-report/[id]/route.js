@@ -7,8 +7,6 @@ export async function GET(request, context) {
   const params = await context.params
   const studentId = params.id
   // 1. Fetch data from DB
-  // Replace with your actual DB call
-
   const { data: milestones, error } = await supabase
     .from("student_milestones")
     .select(
@@ -42,9 +40,6 @@ export async function GET(request, context) {
 
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Growth Report");
-
-
-
 
   // 2. Title
   sheet.mergeCells("A1:C1");
