@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Button } from "./ui/button";
-import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
 import { groupByCategory } from "@/lib/utils";
@@ -22,45 +21,19 @@ export default function GoalsComponent() {
   const [progress, setProgress] = useState(0);
 
   const getCategories = async () => {
-    const { data, error } = await supabase
-      .from("student_milestones")
-      .select(
-        `
-    id,
-    student_id (
-    full_name,
-    status
-    ),
-    milestone_id (
-      id,
-      category_id (
-      id,
-      name,
-      icon
-      ),
-      description,
-      display_order
-    )
-    ,
-    status,
-    started_at,
-    completed_at,
-    updated_by
-  `
-      )
-      .eq("student_id", studentId);
+    const res = await fetch(`/api/students/${studentId}/milestones`);
+    const json = await res.json();
 
-    console.log(data);
-    
-
-    if (error) {
-      console.error("Error fetching data:", error);
+    if (!res.ok) {
+      toast.error("Failed to load milestones");
       return;
     }
 
-    // console.log("data", data[0]);
+    const data = json.data;
+
     setStudentData(data[0]);
     setAllMilestones(data);
+
     const groupedData = groupByCategory(data);
     setGrouped(groupedData);
   };
@@ -90,9 +63,6 @@ export default function GoalsComponent() {
               newStatus === "mastered" ? new Date().toISOString() : null,
           };
         }
-        // console.log("milestone.id",milestone.milestone_id.id);
-        // console.log("studentMilestoneId", studentMilestoneId);
-
         return milestone;
       });
 
@@ -137,67 +107,47 @@ export default function GoalsComponent() {
     router.push("/dashboard");
   };
 
+  // Update Milestones
   const updateMilestones = async () => {
     setLoading(true);
-    setProgress(progress + 10);
+    setProgress(20);
 
     try {
-      // Prepare updates
-      const updates = allMilestones.map((milestone) => ({
-        id: milestone.id,
-        status: milestone.status,
-        started_at: milestone.started_at,
-        completed_at: milestone.completed_at,
-        updated_at: new Date().toISOString(),
-      }));
+      const res = await fetch(`/api/students/${studentId}/milestones/update`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          milestones: allMilestones.map((m) => ({
+            id: m.id,
+            status: m.status,
+            started_at: m.started_at,
+            completed_at: m.completed_at,
+          })),
+        }),
+      });
 
-      setProgress(progress + 20);
+      const result = await res.json();
 
-      // Update each milestone
-      let updateCount = 0;
-      for (const update of updates) {
-        console.log(
-          `Updating milestone ID ${update.id} with status: ${update.status}`
-        );
-        const { data, error } = await supabase
-          .from("student_milestones")
-          .update({
-            status: update.status,
-            started_at: update.started_at,
-            completed_at: update.completed_at,
-            updated_at: update.updated_at,
-          })
-          .eq("id", update.id)
-          .select();
+      if (!res.ok) throw new Error(result.error);
 
-        if (error) {
-          throw error;
-        }
-        console.log("Update result:", data);
-        updateCount++;
-        setProgress(30 + (updateCount / updates.length) * 60);
-      }
       setProgress(100);
       toast.success("Milestones updated successfully!");
       await getCategories();
-    } catch (error) {
-      setProgress(100);
+    } catch (err) {
       toast.error("Error updating milestones");
-      console.error("Error updating milestones:", error);
     } finally {
       setLoading(false);
-      setTimeout(() => setProgress(0), 1000);
+      setTimeout(() => setProgress(0), 800);
     }
   };
 
   const exportReport = () => {
-    setLoading(true)
+    setLoading(true);
     setProgress(20);
     window.open(`/api/export-report/${studentId}`, "_blank");
-    setLoading(false)
-    setProgress(100)
+    setLoading(false);
+    setProgress(100);
   };
-
 
   useEffect(() => {
     getCategories();

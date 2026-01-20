@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { createStudentWithMilestones } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
 import { toast } from "react-toastify";
 
 export default function AddStudentPage() {
@@ -58,6 +57,10 @@ export default function AddStudentPage() {
     setAvatarPreview(null);
   };
 
+  const goBack = () => {
+    router.push("/dashboard")
+  }
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     const user = localStorage.getItem("adminId");
@@ -97,7 +100,7 @@ export default function AddStudentPage() {
         <div className="max-w-4xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors" onClick={goBack}>
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
               </button>
               <div>

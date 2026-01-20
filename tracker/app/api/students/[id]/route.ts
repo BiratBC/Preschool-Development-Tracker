@@ -3,12 +3,14 @@ import { NextResponse } from "next/server";
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
+
 ) {
+  const {id : studentId} = await context.params;
   const { error } = await supabase
     .from("students")
     .delete()
-    .eq("id", params.id);
+    .eq("id", studentId);
 
   if (error) {
     return NextResponse.json(

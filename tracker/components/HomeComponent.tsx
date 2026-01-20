@@ -1,8 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Mail, Lock, Award, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { Button } from "./ui/button";
-import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { toast } from 'react-toastify';
 const HomeComponent = () => {
@@ -13,17 +12,8 @@ const HomeComponent = () => {
 
   const handleAdminAuth = async () => {
   try {
-    const { data, error } = await supabase
-      .from("admin")
-      .select("*")
-      .single();
-
-    console.log({ data, error });
-
-    if (error) {
-      console.error("Supabase error:", error.message);
-      return Response.json({ error: error.message }, { status: 400 });
-    }
+    const res = await fetch("/api/admin");
+    const data = await res.json();
 
     if (!data) {
       console.error("No admin record found in DB");
@@ -33,15 +23,12 @@ const HomeComponent = () => {
       localStorage.setItem("adminId", data?.admin_id ?? "");
       toast.success("Login Successfull");
       router.push("/dashboard");
-      return Response.json({ success: true });
     } else {
       toast.error("Invalid Admin Credentials")
-      return Response.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
   } catch (error) {
     console.error("Unexpected error:", error);
-    return Response.json({ error: "Something went wrong" }, { status: 500 });
   }
 };
 useEffect(() => {

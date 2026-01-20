@@ -268,7 +268,7 @@ export default function DashboardComponent() {
                     className="flex items-center w-screen space-x-4 p-4 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer border border-gray-100"
                   >
                     <Image
-                      src={student?.avatar_url}
+                      src={student?.avatar_url || "/user.png"}
                       alt="Student Avatar"
                       width={400}
                       height={400}

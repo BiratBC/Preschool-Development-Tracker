@@ -1,5 +1,4 @@
 import React from 'react'
-// import MilestoneItem from './MilestoneItem' 
 import { getStatusIcon, getStatusLabel, getStatusColor } from '@/lib/utils';
 
 const CategoryCard = ({name , icon, milestones, onStatusChange}: {name : string, icon : any, milestones : any, onStatusChange: any}) => {
